@@ -1,0 +1,33 @@
+{
+  "name": "renderflow",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "clean": "node -e \"require('fs').rmSync('.node-build',{recursive:true,force:true})\"",
+    "test": "npm run clean && tsc -p tsconfig.node.json && node --test \".node-build/tests/unit/**/*.test.js\"",
+    "test:integration": "npm run clean && tsc -p tsconfig.node.json && node --conditions=react-server --test \".node-build/tests/integration/**/*.test.js\"",
+    "worker": "npm run clean && tsc -p tsconfig.node.json && node --conditions=react-server .node-build/worker/index.js",
+    "db:migrate": "prisma migrate deploy"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.19.3",
+    "next": "16.3.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.6",
+    "prisma": "^6.19.3",
+    "typescript": "^5"
+  }
+}
