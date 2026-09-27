@@ -1,0 +1,176 @@
+// RenderFlow — Prisma schema
+// Source of truth: RenderFlow_PRD_v2.md Section 10 (locked, database-schema.md DB-1).
+// Task 2, Step 1 owner instruction changes vs Section 10, all deliberate:
+//   - Job.status gains DEAD, and FAILED is non-terminal (retries continue from it).
+//     Terminal states are SUCCEEDED and DEAD only.
+//   - Job.attemptCount  -> Job.attempts      (count of runs)
+//   - Job.nextAttemptAt -> Job.runAt         (when the job is next attempted)
+//   - Job.claimedAt     -> Job.startedAt     (start of the current claim)
+//   - Job.completedAt   -> Job.finishedAt    (reached a terminal state)
+//   - Job.attempts relation (JobAttempt[]) renamed to jobAttempts, because
+//     `attempts` is now the integer run count.
+//   - JobStatus.QUEUED keeps the PRD's name for "pending".
+// Unchanged from Section 10: Account, ApiKey, JobAttempt, WebhookEndpoint,
+// WebhookDelivery, the four JobType values, the (accountId, idempotencyKey)
+// unique constraint, and every index except the runAt rename.
+// No migration had been applied before this file, so the renames above are the
+// initial schema rather than destructive renames of an existing column (DB-3).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum JobType {
+  PDF_GENERATION
+  IMAGE_PROCESSING
+  EMAIL_DELIVERY
+  AI_REQUEST
+  WEBHOOK_CALL
+  CUSTOM
+}
+
+enum JobStatus {
+  QUEUED
+  PROCESSING
+  SUCCEEDED
+  FAILED
+  DEAD
+}
+
+enum AttemptOutcome {
+  SUCCEEDED
+  FAILED
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  DELIVERED
+  FAILED
+}
+
+model Account {
+  id              String           @id @default(cuid())
+  name            String
+  createdAt       DateTime         @default(now())
+  apiKey          ApiKey?
+  webhookEndpoint WebhookEndpoint?
+  jobs            Job[]
+
+  @@map("accounts")
+}
+
+model ApiKey {
+  id        String    @id @default(cuid())
+  account   Account   @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  accountId String    @unique
+  hashedKey String    @unique
+  prefix    String
+  createdAt DateTime  @default(now())
+  rotatedAt DateTime?
+
+  @@index([hashedKey])
+  @@map("api_keys")
+}
+
+model Job {
+  id              String    @id @default(cuid())
+  account         Account   @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  accountId       String
+  type            JobType
+  status          JobStatus @default(QUEUED)
+  idempotencyKey  String
+  payload         Json
+  result          Json?
+  lastError       String?
+  attempts        Int       @default(0)
+  maxAttempts     Int       @default(5)
+  runAt           DateTime?
+  startedAt       DateTime?
+  lastHeartbeatAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  finishedAt      DateTime?
+
+  jobAttempts       JobAttempt[]
+  output            JobOutput?
+  webhookDeliveries WebhookDelivery[]
+
+  @@unique([accountId, idempotencyKey])
+  @@index([status, runAt])
+  @@index([status, lastHeartbeatAt])
+  @@index([accountId, status])
+  @@index([accountId, createdAt])
+  @@map("jobs")
+}
+
+model JobAttempt {
+  id            String          @id @default(cuid())
+  job           Job             @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  jobId         String
+  attemptNumber Int
+  startedAt     DateTime
+  finishedAt    DateTime?
+  durationMs    Int?
+  outcome       AttemptOutcome?
+  errorCode     String?
+  errorMessage  String?
+
+  @@unique([jobId, attemptNumber])
+  @@index([jobId])
+  @@map("job_attempts")
+}
+
+model JobOutput {
+  id String @id @default(cuid())
+  job Job @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  /**
+   * Owner's Step 5: the job id is the key on the output. The unique constraint
+   * is what makes "has this already been produced?" a single lookup, and what
+   * stops a second run of the same job recording a second, different output.
+   */
+  jobId String @unique
+  /**
+   * A reference, never the bytes. PR-TECH-007 / PR-JOB-009 forbid storing
+   * binary job output in the database, so a PDF or image lives in object
+   * storage and only its location is kept here.
+   */
+  url      String
+  createdAt DateTime @default(now())
+
+  @@map("job_outputs")
+}
+
+model WebhookEndpoint {
+  id        String   @id @default(cuid())
+  account   Account  @relation(fields: [accountId], references: [id], onDelete: Restrict)
+  accountId String   @unique
+  url       String
+  secret    String
+  createdAt DateTime @default(now())
+
+  deliveries WebhookDelivery[]
+
+  @@map("webhook_endpoints")
+}
+
+model WebhookDelivery {
+  id            String                @id @default(cuid())
+  job           Job                   @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  jobId         String
+  endpoint      WebhookEndpoint       @relation(fields: [endpointId], references: [id], onDelete: Restrict)
+  endpointId    String
+  attemptNumber Int
+  status        WebhookDeliveryStatus @default(PENDING)
+  responseCode  Int?
+  sentAt        DateTime?
+  createdAt     DateTime              @default(now())
+
+  @@index([jobId])
+  @@index([endpointId, status])
+  @@map("webhook_deliveries")
+}

@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "target": "ES2022",
+    "jsx": "react-jsx",
+    "incremental": false,
+    "outDir": ".node-build",
+    "rootDir": ".",
+    "types": ["node"]
+  },
+  "include": [
+    "tests/**/*.ts",
+    "worker/**/*.ts",
+    "modules/**/*.ts",
+    "lib/**/*.ts",
+    "prisma/**/*.ts"
+  ],
+  "exclude": ["node_modules", ".next", ".node-build", "app"]
+}

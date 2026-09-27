@@ -1,0 +1,42 @@
+---
+trigger: always_on
+---
+
+# ai-pipeline.md — Build Rules: AI_REQUEST Job Type (Claude / DeepSeek)
+
+Scope: `/modules/ai` (adapters) and `/worker/executors` for the `AI_REQUEST` job type.
+Precedence: PRD (features) > AGENTS.md (process) > this file. If this file conflicts with either, follow them and flag the conflict.
+
+**Read this first — a real contradiction in the PRD.** Section 6 states `AI_REQUEST` has "no built-in provider integrations" as a v1 non-goal, in the same section that treats `AI_REQUEST` as a normal, working v1 job type, under a PRD-wide assumption (Section 1) that RenderFlow executes job logic itself. Those three things cannot all be true — under self-execution, *something* has to call an actual provider for the job type to do anything. The working interpretation this file uses, until the owner says otherwise: "no built-in provider integrations" means no AI-specific *business logic* — no cost tracking, no prompt templates, no fallback, no streaming (all explicitly named as non-goals in Section 6) — not "no code calls a provider at all." A minimal, generic, vendor-neutral adapter that does nothing but send the caller's own payload and return the response is the smallest thing that makes `AI_REQUEST` function, and that is what this file governs. If this reading is wrong, most of this file needs to be revisited.
+
+Every rule here is a failure condition. Cite AI-n in the Question 6 checklist when touched.
+
+## Rules
+
+**AI-1 This is a pass-through feature, not an internal tool.** Unlike a system that adds AI on top of data it already controls, `AI_REQUEST` exists because the caller wants RenderFlow to send *their own* payload to a provider and hand back the result. Sending that specific job's payload to the provider is correct and expected — it is not a data leak, and nothing in this file exists to block it.
+
+**AI-2 What must stay contained: everything that isn't that one job's own payload.** Only the fields inside a specific `AI_REQUEST` job's own `payload` are ever sent to a provider for that job. Never sent, under any configuration: another job's payload (any account), any other account's data, RenderFlow's own operational data (API key hashes, other customers' job history, abuse-cap counters, webhook secrets), or anything from AuditLog-equivalent internal state. Each provider call is scoped to exactly one job.
+
+**AI-3 The provider is chosen by the caller — and that is a decision the caller is making about their own data, not one you make for them.** `payload.provider` accepts exactly two values: `"claude"` and `"deepseek"`. Any other value is a validation failure at job creation (`NON_RETRYABLE`, before the job is even queued), not something the executor discovers later. **Do not silently default to one provider if the field is missing or invalid** — reject explicitly. Document, in whatever the caller-facing API docs are, that choosing `"deepseek"` sends that job's payload to DeepSeek's hosted service, whose own policy states data is processed on servers in the People's Republic of China — this is the caller's choice to make per job, and RenderFlow's job is to make that choice explicit and informed, not to hide it behind a generic "AI" option.
+
+**AI-4 One thin adapter per provider, same shape as any other job type's executor.** `/modules/ai/claude.ts` and `/modules/ai/deepseek.ts` (or equivalent) are the only files that import a provider SDK or call a provider endpoint. Each takes the job's payload fields and returns either a validated result or a `RETRYABLE`/`NON_RETRYABLE` outcome — the exact same contract every other job type's executor uses (coding-standard.md CS-9, AGENTS rule 9). No vendor name or vendor-specific parameter leaks outside these two files into `/modules/jobs` or `/modules/queue`.
+
+**AI-5 Business behavior depends on plain text in, plain text (or the provider's raw structured response) out — nothing vendor-specific.** Neither adapter relies on a provider's native JSON mode, tool calling, or prompt-caching semantics for anything `/modules/jobs` depends on. Swapping which of the two providers a given job used must never change how the job's lifecycle, retry, or webhook behavior works — only the content of `result` differs.
+
+**AI-6 Model and provider are pinned, not floating.** Each adapter uses an exact, pinned model version from server config — never "latest." A model or provider upgrade is reviewed like any other dependency change (coding-standard.md CS-13) and reruns the tests in AI-11.
+
+**AI-7 The adapter never has tools or side effects.** Text (and, if the payload includes it, image) in, text out. No function or tool calling that lets the provider reach RenderFlow's database, storage, or queue. No URL fetching, no code execution, no agentic loop on RenderFlow's side. This is a stricter version of the same instinct behind security.md SEC-12 (an outbound call is a trust boundary) — here the boundary is what the *provider* is allowed to do back to RenderFlow, which is nothing.
+
+**AI-8 The result is untrusted text and is handled like any other externally-sourced content.** The provider's raw response becomes `Job.result` after passing through the same validation every job result gets: JSON-safe, within the size limits `result` requires. RenderFlow does not need to judge whether the AI's answer is *correct* — that's the caller's problem, this isn't an advisory system — but it does validate the response isn't malformed, oversized, or something that would break downstream storage or rendering (design-system-rule.md DS-7 covers safe rendering on the dashboard side).
+
+**AI-9 Provider errors map into the same taxonomy as every other job type, not a special case (Section 6, coding-standard.md CS-9).** A timeout, a 5xx, or a rate-limit response from either provider is `RETRYABLE`. A 4xx (bad request, invalid API key on RenderFlow's side, content-policy rejection from the provider) is `NON_RETRYABLE`. No AI-specific retry count, no AI-specific backoff — `AI_REQUEST` uses the same fixed per-type config as every job type (PR-RETRY-001).
+
+**AI-10 No fallback between providers.** If the caller's chosen provider fails, the job fails or retries under AI-9 — it never silently routes to the other provider. This matches Section 6's explicit "no provider fallback" non-goal directly; a caller who wants a fallback submits a second job.
+
+**AI-11 RenderFlow's own provider credentials, never the caller's.** The caller does not supply an API key for Claude or DeepSeek — RenderFlow's own platform keys are used, one per provider, server-only env vars, read only inside the matching adapter file, never logged (security.md SEC-8, SEC-13). Because RenderFlow is paying for and is responsible for this cost per job, `AI_REQUEST` jobs are explicitly the job type PR-ABUSE-001's caps exist to protect against — the concurrent-job and daily-submission caps apply to `AI_REQUEST` exactly like every other job type, with no separate or higher limit.
+
+**AI-12 RenderFlow's own decisions are never influenced by AI_REQUEST content.** The content of an `AI_REQUEST` payload or result is never read by any code outside its own adapter and the job's own lifecycle. It never feeds into rate-limit decisions, abuse-cap logic, another account's jobs, or any future internal RenderFlow feature ("AI-powered dashboard insights" and similar are not in scope and are not authorized by this file).
+
+**AI-13 If the executor adds any RenderFlow-authored instruction to the provider call** (a system prompt wrapping the caller's payload, for example), that instruction and the caller's payload are kept in clearly separated fields per the provider's own message-role structure, never string-concatenated — so a caller's prompt cannot override RenderFlow-authored instructions by injection. If the adapter adds no such instruction (pure pass-through), this rule doesn't apply, but say so explicitly in the adapter's own comments so the next person doesn't have to guess.
+
+**AI-14 Contract tests cover both adapters identically.** The same fixture suite (successful response, malformed response, timeout, rate-limit, invalid-provider-value rejection) runs against both `claude.ts` and `deepseek.ts` in CI, using fake providers — never real API calls with real cost in automated tests. A provider that passes this suite satisfies every rule above; this is the concrete way "fine for Claude, fine for DeepSeek" gets proven, not asserted.
