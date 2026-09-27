@@ -23,10 +23,25 @@ import { processClaimedJob } from "./process-job";
  */
 
 let inFlight = 0;
+let peakInFlight = 0;
 let shuttingDown = false;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Tracks the per-process concurrency high-water mark (PR-QUEUE-004) and logs each
+ * new peak. The cap is what stops one account's backlog from starving everyone
+ * else, so the highest level actually reached is worth seeing in the worker's
+ * output rather than having to be inferred from the configured limit.
+ */
+function beginJob(): void {
+  inFlight += 1;
+  if (inFlight > peakInFlight) {
+    peakInFlight = inFlight;
+    console.log(`Concurrency high-water mark: ${peakInFlight} of ${WORKER_CONCURRENCY}`);
+  }
 }
 
 async function claimAndStartJobs(types: readonly JobType[]): Promise<boolean> {
@@ -39,7 +54,7 @@ async function claimAndStartJobs(types: readonly JobType[]): Promise<boolean> {
     }
 
     startedAny = true;
-    inFlight += 1;
+    beginJob();
 
     void processClaimedJob(job, WORKER_HEARTBEAT_INTERVAL_MS).finally(() => {
       inFlight -= 1;
@@ -83,7 +98,9 @@ export async function runWorker(): Promise<void> {
   stopSweep();
   console.log(`Worker shutting down; waiting for ${inFlight} in-flight job(s)`);
   await waitForInFlightJobsToFinish();
-  console.log("Worker stopped");
+  console.log(
+    `Worker stopped; peak concurrency ${peakInFlight} of ${WORKER_CONCURRENCY}`,
+  );
 }
 
 function requestShutdown(signal: string): void {

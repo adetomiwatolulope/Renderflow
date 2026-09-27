@@ -22,7 +22,7 @@ const STALL_TIMEOUT_MS = 600_000;
 let accountId: string;
 
 function staleHeartbeat(): Date {
-  return staleHeartbeat();
+  return new Date(Date.now() - STALL_TIMEOUT_MS - 60_000);
 }
 
 async function insertJob(overrides: {
@@ -66,6 +66,10 @@ after(async () => {
 });
 
 beforeEach(async () => {
+  // Child rows first: the job FKs are ON DELETE RESTRICT, so deleting a job that
+  // still has attempts or an output reference is refused.
+  await db.jobAttempt.deleteMany({ where: { job: { accountId } } });
+  await db.jobOutput.deleteMany({ where: { job: { accountId } } });
   await db.job.deleteMany({ where: { accountId } });
 });
 
@@ -276,10 +280,13 @@ describe("recordHeartbeat", () => {
       startedAt: new Date(Date.now() - 1_000_000),
     });
 
-    const result = await sweepStalledJobs({ stallTimeoutMs: STALL_TIMEOUT_MS });
-    assert.equal(result.swept, 0, "stale before the beat");
-
+    // The heartbeat has to arrive *before* the sweep, otherwise the job is
+    // legitimately stale and gets recovered: this asserts the beat is what
+    // protects a running job, not that a stale job escapes the sweep.
     await recordHeartbeat(jobId);
+
+    const result = await sweepStalledJobs({ stallTimeoutMs: STALL_TIMEOUT_MS });
+    assert.equal(result.swept, 0, "a just-heartbeated job must not be swept");
 
     const job = await db.job.findUniqueOrThrow({ where: { id: jobId } });
     assert.equal(job.status, JobStatus.PROCESSING);

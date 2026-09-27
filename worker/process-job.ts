@@ -1,6 +1,7 @@
 import type { ClaimedJob } from "../modules/queue/claim";
 import { startHeartbeat } from "../modules/queue/heartbeat";
 import { markJobSucceeded, settleAttemptFailure } from "../modules/queue/settle";
+import { deliverTerminalJobNotification } from "../modules/webhooks/deliver-notification";
 import { resolveExecutor } from "./executors/registry";
 import type { ExecutionResult } from "./executors/types";
 import { failureFromThrownError } from "./failure";
@@ -39,6 +40,7 @@ export async function processClaimedJob(
   try {
     if (outcome.kind === "success") {
       await markJobSucceeded(job, outcome.result);
+      await notifyCallerOfTerminalState(job.id);
       return;
     }
 
@@ -52,9 +54,28 @@ export async function processClaimedJob(
       `Job ${job.id} attempt ${job.attempts}/${job.maxAttempts} failed -> ${status}` +
         ` (${outcome.errorCode})`,
     );
+
+    // Only the exhausted/non-retryable case is terminal. A retry-waiting FAILED
+    // is not a final state, so the caller is not told about it (PR-WEBHOOK-002).
+    await notifyCallerOfTerminalState(job.id);
   } catch (error) {
     console.error(`Failed to settle job ${job.id}`, error);
   } finally {
     stopHeartbeat();
+  }
+}
+
+/**
+ * PR-TECH-005: the worker notifies the caller, after the terminal state is
+ * committed, and never lets delivery trouble be mistaken for a job failure.
+ * `deliverTerminalJobNotification` decides internally whether the job actually
+ * reached a terminal state, and a delivery error must not propagate into the
+ * settle path, so it is caught and logged here.
+ */
+async function notifyCallerOfTerminalState(jobId: string): Promise<void> {
+  try {
+    await deliverTerminalJobNotification(jobId);
+  } catch (error) {
+    console.error(`Webhook notification for job ${jobId} raised; job status is unaffected`, error);
   }
 }

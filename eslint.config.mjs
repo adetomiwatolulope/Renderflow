@@ -26,6 +26,17 @@ const eslintConfig = defineConfig([
     // outside coding-standard.md's scope (/app, /modules, /worker, /lib, /tests)
     // and is never edited by the build (DS-1).
     "generate-css-vars.js",
+    // Step 9 adversarial harness (CommonJS by design: it is run directly with
+    // `node`, not compiled by tsconfig.node.json, and it drives the real worker
+    // and Next server as child processes). Test scaffolding, not product code,
+    // so it sits outside coding-standard.md's scope like the generator above.
+    "scripts/step9/**",
+    // Evidence capture scripts. CommonJS for the same reason as the harness: they
+    // are run directly with `node`, spawn the worker and a headless browser as
+    // child processes, and produce artifacts rather than product code. They live
+    // in evidence/ so the whole evidence package is self-contained, which means
+    // they are outside the /app, /modules, /worker, /lib, /tests scope.
+    "evidence/scripts/**",
   ]),
 ]);
 

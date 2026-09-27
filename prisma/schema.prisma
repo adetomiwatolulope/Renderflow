@@ -1,4 +1,4 @@
-// RenderFlow — Prisma schema
+// RenderFlow - Prisma schema
 // Source of truth: RenderFlow_PRD_v2.md Section 10 (locked, database-schema.md DB-1).
 // Task 2, Step 1 owner instruction changes vs Section 10, all deliberate:
 //   - Job.status gains DEAD, and FAILED is non-terminal (retries continue from it).
@@ -56,7 +56,7 @@ enum WebhookDeliveryStatus {
 model Account {
   id              String           @id @default(cuid())
   name            String
-  createdAt       DateTime         @default(now())
+  createdAt       DateTime @db.Timestamptz(3)         @default(now())
   apiKey          ApiKey?
   webhookEndpoint WebhookEndpoint?
   jobs            Job[]
@@ -70,8 +70,8 @@ model ApiKey {
   accountId String    @unique
   hashedKey String    @unique
   prefix    String
-  createdAt DateTime  @default(now())
-  rotatedAt DateTime?
+  createdAt DateTime @db.Timestamptz(3)  @default(now())
+  rotatedAt DateTime? @db.Timestamptz(3)
 
   @@index([hashedKey])
   @@map("api_keys")
@@ -89,12 +89,12 @@ model Job {
   lastError       String?
   attempts        Int       @default(0)
   maxAttempts     Int       @default(5)
-  runAt           DateTime?
-  startedAt       DateTime?
-  lastHeartbeatAt DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  finishedAt      DateTime?
+  runAt           DateTime? @db.Timestamptz(3)
+  startedAt       DateTime? @db.Timestamptz(3)
+  lastHeartbeatAt DateTime? @db.Timestamptz(3)
+  createdAt       DateTime @db.Timestamptz(3)  @default(now())
+  updatedAt       DateTime @db.Timestamptz(3)  @updatedAt
+  finishedAt      DateTime? @db.Timestamptz(3)
 
   jobAttempts       JobAttempt[]
   output            JobOutput?
@@ -113,8 +113,8 @@ model JobAttempt {
   job           Job             @relation(fields: [jobId], references: [id], onDelete: Restrict)
   jobId         String
   attemptNumber Int
-  startedAt     DateTime
-  finishedAt    DateTime?
+  startedAt     DateTime @db.Timestamptz(3)
+  finishedAt    DateTime? @db.Timestamptz(3)
   durationMs    Int?
   outcome       AttemptOutcome?
   errorCode     String?
@@ -140,7 +140,7 @@ model JobOutput {
    * storage and only its location is kept here.
    */
   url      String
-  createdAt DateTime @default(now())
+  createdAt DateTime @db.Timestamptz(3) @default(now())
 
   @@map("job_outputs")
 }
@@ -151,7 +151,7 @@ model WebhookEndpoint {
   accountId String   @unique
   url       String
   secret    String
-  createdAt DateTime @default(now())
+  createdAt DateTime @db.Timestamptz(3) @default(now())
 
   deliveries WebhookDelivery[]
 
@@ -167,10 +167,39 @@ model WebhookDelivery {
   attemptNumber Int
   status        WebhookDeliveryStatus @default(PENDING)
   responseCode  Int?
-  sentAt        DateTime?
-  createdAt     DateTime              @default(now())
+  sentAt        DateTime? @db.Timestamptz(3)
+  createdAt     DateTime @db.Timestamptz(3)              @default(now())
 
   @@index([jobId])
   @@index([endpointId, status])
   @@map("webhook_deliveries")
+}
+
+/**
+ * PR-TECH-006: the Postgres-backed rate-limit counter.
+ *
+ * Explicitly NOT an in-memory counter, so the limit stays correct if the web app
+ * ever runs as more than one instance. The PRD accepts one write per request as
+ * the cost of that guarantee, and names Redis-for-rate-limiting-only as a
+ * deliberate v2 decision rather than a default fallback.
+ *
+ * One row per (key, minute bucket). The limiter reads the current and previous
+ * bucket and weights the previous one by how far into the current minute it is,
+ * which is a sliding window rather than the burst-permitting fixed window.
+ *
+ * `key` is the accountId rather than the hashed API key. There is exactly one
+ * active key per account (PR-AUTH-002), so this is the same partition, but
+ * keying on the key would hand an account a fresh rate-limit budget every time it
+ * rotated, which is a trivial way around the limit and the wrong key.
+ */
+model RateLimitWindow {
+  key         String
+  windowStart DateTime @db.Timestamptz(3)
+  count       Int      @default(0)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  @@id([key, windowStart])
+  // Supports discarding buckets that can no longer influence a decision.
+  @@index([windowStart])
+  @@map("rate_limit_windows")
 }

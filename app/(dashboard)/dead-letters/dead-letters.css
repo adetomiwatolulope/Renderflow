@@ -1,0 +1,191 @@
+/*
+ * Dead-letter view styles.
+ *
+ * Consumes the generated token file (imported once, globally, in the root
+ * layout). It re-declares no token value (DS-2), uses role tokens only (DS-3), and
+ * takes every margin, padding and gap from a --spacing-system-* token (DS-5).
+ *
+ * DS-9 gaps left empty on purpose, not overlooked: there is no token for
+ * border-radius, border width or border colour, so this file draws no borders and
+ * sets no radius. Separation comes from surface fills and a shadow instead. The
+ * browser's default focus indicator is left in place, and there are no
+ * prefers-color-scheme overrides.
+ *
+ * DS-6: this file sets no font-family, font-size, font-weight, line-height or
+ * letter-spacing. Type styling comes from the .typography-* classes applied in
+ * the component, and colour from role tokens.
+ */
+
+.dead-view {
+  background-color: var(--color-roles-surface);
+  color: var(--color-roles-on-surface);
+  padding: var(--spacing-system-large-spacing);
+}
+
+.dead-view__header {
+  margin-bottom: var(--spacing-system-large-spacing);
+}
+
+.dead-view__title {
+  margin: 0 0 var(--spacing-system-extra-small-spacing);
+}
+
+.dead-view__subtitle,
+.dead-view__empty {
+  color: var(--color-roles-on-surface-varaint);
+  margin: 0;
+}
+
+.dead-view__empty {
+  padding: var(--spacing-system-medium-spacing);
+}
+
+/* Login form */
+
+.dead-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-system-extra-small-spacing);
+  background-color: var(--color-roles-surface-container);
+  border-radius: 0;
+  box-shadow: var(--effect-soft-shadow);
+  padding: var(--spacing-system-medium-spacing);
+  max-width: 32rem;
+}
+
+.dead-form__label {
+  color: var(--color-roles-on-surface);
+}
+
+.dead-form__input {
+  background-color: var(--color-roles-surface);
+  color: var(--color-roles-on-surface);
+  border: 0;
+  border-radius: 0;
+  padding: var(--spacing-system-base-spacing);
+}
+
+.dead-form__button {
+  background-color: var(--color-roles-neutral-variant-container);
+  color: var(--color-roles-on-surface);
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  padding: var(--spacing-system-base-spacing) var(--spacing-system-medium-spacing);
+}
+
+.dead-form__button:disabled {
+  cursor: default;
+  color: var(--color-roles-on-surface-varaint);
+}
+
+.dead-form__error {
+  color: var(--color-roles-on-error-container);
+  background-color: var(--color-roles-error-container);
+  margin: 0;
+  padding: var(--spacing-system-base-spacing);
+}
+
+/* Results */
+
+.dead-results {
+  margin-top: var(--spacing-system-large-spacing);
+}
+
+.dead-results__summary {
+  margin: 0 0 var(--spacing-system-base-spacing);
+}
+
+.dead-results__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-system-medium-spacing);
+}
+
+.dead-results__note {
+  color: var(--color-roles-on-surface-varaint);
+  margin-top: var(--spacing-system-medium-spacing);
+}
+
+/* One dead job */
+
+.dead-card {
+  background-color: var(--color-roles-surface-container-low);
+  border-radius: 0;
+  box-shadow: var(--effect-soft-shadow);
+  padding: var(--spacing-system-medium-spacing);
+}
+
+.dead-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-system-base-spacing);
+  flex-wrap: wrap;
+  margin-bottom: var(--spacing-system-base-spacing);
+}
+
+.dead-badge {
+  /* error-container / on-error-container is not one of the DS-8 pairings that
+     fail contrast, and the label text always appears with the colour. */
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+  padding: var(--spacing-system-extra-small-spacing) var(--spacing-system-base-spacing);
+}
+
+.dead-card__type {
+  background-color: var(--color-roles-surface-container-high);
+  color: var(--color-roles-on-surface);
+  padding: var(--spacing-system-extra-small-spacing) var(--spacing-system-base-spacing);
+}
+
+.dead-card__attempts {
+  color: var(--color-roles-on-surface-varaint);
+}
+
+.dead-card__meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--spacing-system-extra-small-spacing) var(--spacing-system-base-spacing);
+  margin: 0 0 var(--spacing-system-base-spacing);
+}
+
+.dead-card__meta dt {
+  color: var(--color-roles-on-surface-varaint);
+}
+
+.dead-card__meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.dead-card__block {
+  margin-top: var(--spacing-system-base-spacing);
+}
+
+.dead-card__heading {
+  margin: 0 0 var(--spacing-system-extra-small-spacing);
+}
+
+.dead-card__empty {
+  color: var(--color-roles-on-surface-varaint);
+  margin: 0;
+}
+
+.dead-card__error {
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+  margin: 0;
+  padding: var(--spacing-system-base-spacing);
+  overflow-wrap: anywhere;
+}
+
+.dead-card__payload {
+  background-color: var(--color-roles-surface-container-highest);
+  color: var(--color-roles-on-surface);
+  margin: 0;
+  padding: var(--spacing-system-base-spacing);
+  overflow-x: auto;
+}

@@ -16,7 +16,8 @@
     "worker/**/*.ts",
     "modules/**/*.ts",
     "lib/**/*.ts",
-    "prisma/**/*.ts"
+    "prisma/**/*.ts",
+    "scripts/**/*.ts"
   ],
   "exclude": ["node_modules", ".next", ".node-build", "app"]
 }

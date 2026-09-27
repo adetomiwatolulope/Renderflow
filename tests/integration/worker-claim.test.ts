@@ -67,14 +67,23 @@ test("a claim marks the job PROCESSING, increments attempts, and sets startedAt"
 });
 
 test("a claimed job is not claimable again", async () => {
-  await createQueuedJob();
+  // Two jobs, so a second claim that returns a job proves the queue still works
+  // and the first claim was not handed out a second time. Asserting on a second
+  // claim with only one job would pass just as well if claiming were broken.
+  const firstId = await createQueuedJob();
+  const secondId = await createQueuedJob();
   const types = executableJobTypes();
 
   const first = await claimNextJob(types);
-  assert.ok(first);
   const second = await claimNextJob(types);
-  assert.ok(second);
-  assert.notEqual(second.id, first.id, "PROCESSING job must not be re-claimable");
+
+  assert.ok(first && second, "both queued jobs are claimable");
+  assert.notEqual(first.id, second.id, "PROCESSING job must not be re-claimable");
+  assert.deepEqual(
+    new Set([first.id, second.id]),
+    new Set([firstId, secondId]),
+    "each queued job is claimed exactly once",
+  );
 });
 
 // The race: many workers all reach for the same single pending job at once.

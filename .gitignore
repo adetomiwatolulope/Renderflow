@@ -43,3 +43,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Step 9 adversarial harness. The TLS material is generated per run by
+# scripts/step9/make-cert.ps1 and the private key must never be committed
+# (*.pem above already covers the key, this covers the whole directory).
+/scripts/step9/certs/
+# Harness run logs.
+/.step9-*.log
