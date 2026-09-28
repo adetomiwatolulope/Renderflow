@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { InvalidJobSubmissionError } from "../../modules/jobs/errors";
+import { InvalidJobSubmissionError, PayloadTooLargeError } from "../../modules/jobs/errors";
 import {
   MAX_PAYLOAD_BYTES,
   validateJobSubmission,
@@ -121,6 +121,37 @@ test("rejects a payload over 256KB", () => {
     idempotencyKey: "k",
   });
   assert.ok("payload" in errors);
+});
+
+// PR-JOB-008 / AGENTS rule 7: an oversized payload is its own error so the route
+// can answer 413 rather than 422. It stays a submission error, so callers that
+// only need "this body was refused" are unaffected.
+test("an oversized payload raises the error that maps to 413", () => {
+  const oversized = { blob: "x".repeat(MAX_PAYLOAD_BYTES + 1) };
+  assert.throws(
+    () =>
+      validateJobSubmission({ type: "CUSTOM", payload: oversized, idempotencyKey: "k" }),
+    (error: unknown) => {
+      assert.ok(error instanceof PayloadTooLargeError);
+      assert.ok(error instanceof InvalidJobSubmissionError);
+      assert.equal(error.byteLimit, MAX_PAYLOAD_BYTES);
+      assert.equal(error.fieldErrors.payload, `payload exceeds the ${MAX_PAYLOAD_BYTES} byte limit`);
+      return true;
+    },
+  );
+});
+
+// A payload that is merely invalid is still a 422, not a 413. Without this the
+// subclass above could quietly take over every field-level rejection.
+test("an invalid field is not mistaken for an oversized payload", () => {
+  assert.throws(
+    () => validateJobSubmission({ type: "CUSTOM", payload: {} }),
+    (error: unknown) => {
+      assert.ok(error instanceof InvalidJobSubmissionError);
+      assert.equal(error instanceof PayloadTooLargeError, false);
+      return true;
+    },
+  );
 });
 
 test("accepts a payload just under the cap", () => {

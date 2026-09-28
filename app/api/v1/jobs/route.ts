@@ -7,6 +7,7 @@ import { createJob } from "../../../../modules/jobs/create-job";
 import {
   IdempotencyConflictError,
   InvalidJobSubmissionError,
+  PayloadTooLargeError,
 } from "../../../../modules/jobs/errors";
 import {
   InvalidJobListQueryError,
@@ -128,6 +129,17 @@ export async function POST(request: Request): Promise<NextResponse> {
       status: result.outcome === "created" ? 202 : 200,
     });
   } catch (error) {
+    // PR-JOB-008 / AGENTS rule 7: an oversized payload is 413, not 422. This
+    // branch has to precede the InvalidJobSubmissionError branch below because
+    // PayloadTooLargeError is a subclass of it.
+    if (error instanceof PayloadTooLargeError) {
+      return problem(
+        413,
+        "payload_too_large",
+        `Payload exceeds the ${error.byteLimit} byte limit`,
+      );
+    }
+
     if (error instanceof InvalidJobSubmissionError) {
       return problem(422, "invalid_submission", "Request failed validation", {
         ...error.fieldErrors,

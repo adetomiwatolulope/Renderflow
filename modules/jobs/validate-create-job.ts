@@ -1,6 +1,6 @@
 import { JobType } from "@prisma/client";
 
-import { InvalidJobSubmissionError } from "./errors";
+import { InvalidJobSubmissionError, PayloadTooLargeError } from "./errors";
 import type { JsonObject, JsonValue } from "./json-value";
 
 /** PR-JOB-008: the cap is on the serialized JSON byte size of `payload`. */
@@ -136,9 +136,11 @@ export function validateJobSubmission(body: unknown): ValidatedJobSubmission {
   } else if (Buffer.byteLength(JSON.stringify(body.payload), "utf8") > MAX_PAYLOAD_BYTES) {
     // PR-JOB-008. Raised ahead of the other field errors so an oversized payload
     // is reported on its own rather than alongside unrelated complaints.
-    throw new InvalidJobSubmissionError({
-      payload: `payload exceeds the ${MAX_PAYLOAD_BYTES} byte limit`,
-    });
+    //
+    // A dedicated error, not a plain InvalidJobSubmissionError: the PRD requires
+    // 413 for this and 422 for an invalid field, and one class cannot carry two
+    // statuses. Both mean the job is refused before any row exists (AGENTS rule 7).
+    throw new PayloadTooLargeError(MAX_PAYLOAD_BYTES);
   } else {
     const parsed = parseJsonValue(body.payload);
     if (parsed.ok && isJsonObject(parsed.value)) {
