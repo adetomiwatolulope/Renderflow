@@ -3,15 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "clean": "node -e \"require('fs').rmSync('.node-build',{recursive:true,force:true})\"",
     "test": "npm run clean && tsc -p tsconfig.node.json && node --test \".node-build/tests/unit/**/*.test.js\"",
-    "test:integration": "npm run clean && tsc -p tsconfig.node.json && node --conditions=react-server --test \".node-build/tests/integration/**/*.test.js\"",
+    "test:integration": "npm run clean && tsc -p tsconfig.node.json && node --conditions=react-server --test --test-concurrency=1 \".node-build/tests/integration/**/*.test.js\"",
     "worker": "npm run clean && tsc -p tsconfig.node.json && node --conditions=react-server .node-build/worker/index.js",
+    "provision-account": "npm run clean && tsc -p tsconfig.node.json && node --env-file=.env --conditions=react-server .node-build/scripts/provision-account.js",
+    "seed-demo": "npm run clean && tsc -p tsconfig.node.json && node --env-file=.env --conditions=react-server .node-build/scripts/seed-demo.js",
     "db:migrate": "prisma migrate deploy"
   },
   "dependencies": {

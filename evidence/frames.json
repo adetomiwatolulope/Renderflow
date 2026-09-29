@@ -1,0 +1,35 @@
+{
+  "generatedAt": "2026-09-27T20:17:17.040Z",
+  "frames": [
+    {
+      "file": "01-jobs-table.png",
+      "note": "Jobs table for one account: 9 jobs covering all five statuses.",
+      "capturedAt": "2026-09-27T20:17:09.913Z",
+      "renderedText": "Job\tType\tStatus\tAttempts\tCreated\tFinished\tLast error\ncmuk9e64k000ktr0cy7fqfc5q\tCUSTOM\tQUEUED\t0/3\t2026-09-27 20:16:21.380Z\t—\t—\ncmuk9e64g000itr0c0coupi24\tEMAIL_DELIVERY\tDEAD\t5/5\t2026-09-27 20:16:21.376Z\t2026-09-27 20:16:21.374Z\tSMTP timeout after 3 connections\ncmuk9e64b000gtr0c3zh8wak0\tPDF_GENERATION\tDEAD\t5/5\t2026-09-27 20:16:21.371Z\t2026-09-27 20:16:21.369Z\tHTTP 400 from renderer: unsupported font\ncmuk9e647000etr0ct3wpnksl\tWEBHOOK_CALL\tFAILED\t2/3\t2026-09-27 20:16:21.367Z\t—\tHTTP 503 from provider\ncmuk9e643000ctr0c6mxi58fh\tIMAGE_PROCESSING\tPROCESSING\t1/4\t2026-09-27 20:16:21.363Z\t—\t—\ncmuk9e61u000atr0c5l5g5jkc\tAI_REQUEST\tSUCCEEDED\t1/3\t2026-09-27 20:16:21.282Z\t2026-09-27 20:16:21.280Z\t—\ncmuk9e6160008tr0cqk95w0wk\tWEBHOOK_CALL\tSUCCEEDED\t1/3\t2026-09-27 20:16:21.258Z\t2026-09-27 20:16:21.256Z\t—\ncmuk9e6100006tr0casbnjakl\tEMAIL_DELIVERY\tSUCCEEDED\t2/5\t2026-09-27 20:16:21.252Z\t2026-09-27 20:16:21.250Z\t—\ncmuk9e60p0004tr0cfcjzu484\tPDF_GENERATION\tSUCCEEDED\t1/5\t2026-09-27 20:16:21.241Z\t2026-09-27 20:16:21.233Z\t—"
+    },
+    {
+      "file": "04a-before-kill.png",
+      "note": "Job in flight with a live heartbeat, before the worker is killed.",
+      "capturedAt": "2026-09-27T19:46:24.384Z",
+      "renderedText": "Job\tType\tStatus\tAttempts\tCreated\tFinished\tLast error\ncmuk8bhhd000jtrzo990txmk2\tWEBHOOK_CALL\tPROCESSING\t1/5\t2026-09-27 19:46:16.513Z\t—\t—"
+    },
+    {
+      "file": "04b-after-kill.png",
+      "note": "Worker SIGKILLed; job still PROCESSING and wedged, no attempt settled yet.",
+      "capturedAt": "2026-09-27T19:46:28.592Z",
+      "renderedText": "Job\tType\tStatus\tAttempts\tCreated\tFinished\tLast error\ncmuk8bhhd000jtrzo990txmk2\tWEBHOOK_CALL\tPROCESSING\t1/5\t2026-09-27 19:46:16.513Z\t—\t—"
+    },
+    {
+      "file": "04c-after-recovery.png",
+      "note": "After recovery: the stall sweep recorded the killed attempt as WORKER_STALLED and the retry succeeded.",
+      "capturedAt": "2026-09-27T19:47:45.878Z",
+      "renderedText": "Job\tType\tStatus\tAttempts\tCreated\tFinished\tLast error\ncmuk8bhhd000jtrzo990txmk2\tWEBHOOK_CALL\tSUCCEEDED\t2/5\t2026-09-27 19:46:16.513Z\t2026-09-27 19:47:41.870Z\t—"
+    },
+    {
+      "file": "05-dead-letters.png",
+      "note": "Dead-letter view holding 2 exhausted job(s).",
+      "capturedAt": "2026-09-27T20:17:17.040Z",
+      "renderedText": "Dead letters\n\nJobs that exhausted their retries or failed unrecoverably. This view is read-only: re-running a job is not part of this build.\n\nAccount API key\nView dead jobs\n\n2 dead jobs\n\nDEAD\nEMAIL_DELIVERY\n5 of 5 attempts used\nJob\ncmuk9e64g000itr0c0coupi24\nFailed at\n2026-09-27 20:16:21.374Z\nCreated\n2026-09-27 20:16:21.376Z\nLast error\n\nSMTP timeout after 3 connections\n\nPayload\n{\n  \"note\": \"demo job\",\n  \"index\": 7\n}\nDEAD\nPDF_GENERATION\n5 of 5 attempts used\nJob\ncmuk9e64b000gtr0c3zh8wak0\nFailed at\n2026-09-27 20:16:21.369Z\nCreated\n2026-09-27 20:16:21.371Z\nLast error\n\nHTTP 400 from renderer: unsupported font\n\nPayload\n{\n  \"note\": \"demo job\",\n  \"index\": 6\n}"
+    }
+  ]
+}

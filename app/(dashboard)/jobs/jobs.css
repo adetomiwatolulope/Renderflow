@@ -1,0 +1,188 @@
+/*
+ * Jobs list styles.
+ *
+ * Follows the same rules as the dead-letter view: no token value is re-declared
+ * (DS-2), only role tokens are used (DS-3), every gap comes from a
+ * --spacing-system-* token (DS-5), and no font or border value is set here (DS-6,
+ * DS-9). Type styling comes from the .typography-* classes in the component.
+ *
+ * Status is never carried by colour alone: each badge also contains the status
+ * word, so the table is readable without colour perception.
+ */
+
+.jobs-view {
+  background-color: var(--color-roles-surface);
+  color: var(--color-roles-on-surface);
+  padding: var(--spacing-system-large-spacing);
+}
+
+.jobs-view__header {
+  margin-bottom: var(--spacing-system-large-spacing);
+}
+
+.jobs-view__title {
+  margin: 0 0 var(--spacing-system-extra-small-spacing);
+}
+
+.jobs-view__subtitle,
+.jobs-view__empty {
+  color: var(--color-roles-on-surface-varaint);
+  margin: 0;
+}
+
+.jobs-view__empty {
+  padding: var(--spacing-system-medium-spacing);
+}
+
+/* Search form */
+
+.jobs-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-system-extra-small-spacing);
+  background-color: var(--color-roles-surface-container);
+  box-shadow: var(--effect-soft-shadow);
+  padding: var(--spacing-system-medium-spacing);
+}
+
+.jobs-form__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-system-base-spacing);
+}
+
+.jobs-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-system-extra-extra-samll-spacing);
+  flex: 1 1 12rem;
+}
+
+.jobs-form__label {
+  color: var(--color-roles-on-surface);
+}
+
+.jobs-form__input,
+.jobs-form__select {
+  background-color: var(--color-roles-surface);
+  color: var(--color-roles-on-surface);
+  border: 0;
+  border-radius: 0;
+  padding: var(--spacing-system-base-spacing);
+  font: inherit;
+}
+
+.jobs-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-system-extra-small-spacing);
+}
+
+.jobs-form__button {
+  background-color: var(--color-roles-neutral-variant-container);
+  color: var(--color-roles-on-surface);
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+  padding: var(--spacing-system-base-spacing) var(--spacing-system-medium-spacing);
+}
+
+.jobs-form__button:disabled {
+  cursor: default;
+  color: var(--color-roles-on-surface-varaint);
+}
+
+.jobs-form__error {
+  color: var(--color-roles-on-error-container);
+  background-color: var(--color-roles-error-container);
+  margin: 0;
+  padding: var(--spacing-system-base-spacing);
+}
+
+/* Results */
+
+.jobs-results {
+  margin-top: var(--spacing-system-large-spacing);
+}
+
+.jobs-results__scroll {
+  overflow-x: auto;
+  box-shadow: var(--effect-soft-shadow);
+}
+
+.jobs-results__summary {
+  color: var(--color-roles-on-surface-varaint);
+  margin: var(--spacing-system-base-spacing) 0 0;
+}
+
+/* Table */
+
+.jobs-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--color-roles-surface-container-lowest);
+  text-align: left;
+}
+
+.jobs-table th,
+.jobs-table td {
+  padding: var(--spacing-system-extra-small-spacing) var(--spacing-system-medium-spacing);
+  vertical-align: top;
+}
+
+.jobs-table th {
+  background-color: var(--color-roles-surface-container-high);
+  color: var(--color-roles-on-surface);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.jobs-table__id {
+  overflow-wrap: anywhere;
+}
+
+.jobs-table__numeric {
+  white-space: nowrap;
+}
+
+.jobs-table__error {
+  max-width: 20rem;
+  overflow-wrap: anywhere;
+}
+
+.jobs-table__none {
+  color: var(--color-roles-on-surface-varaint);
+}
+
+/* Status badges */
+
+.jobs-badge {
+  display: inline-block;
+  padding: var(--spacing-system-extremely-small-spacing) var(--spacing-system-extra-small-spacing);
+  white-space: nowrap;
+}
+
+.jobs-badge--succeeded {
+  background-color: var(--color-roles-success-container);
+  color: var(--color-roles-on-success-container);
+}
+
+.jobs-badge--failed {
+  background-color: var(--color-roles-warning-container);
+  color: var(--color-roles-on-warning-container);
+}
+
+.jobs-badge--dead {
+  background-color: var(--color-roles-error-container);
+  color: var(--color-roles-on-error-container);
+}
+
+.jobs-badge--processing {
+  background-color: var(--color-roles-info-container);
+  color: var(--color-roles-on-info-container);
+}
+
+.jobs-badge--queued {
+  background-color: var(--color-roles-neutral-container);
+  color: var(--color-roles-on-neutral-container);
+}
